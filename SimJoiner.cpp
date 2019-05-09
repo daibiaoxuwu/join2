@@ -79,11 +79,10 @@ SimJoiner::~SimJoiner() {
 }
 
 int SimJoiner::createJaccIDF(const char *filename, int id) {
-    ifstream fin1(filename);
-    string str1;
-    int lineidx = 0;
-    while (getline(fin1, str1))
-    {
+    char buf[1024];
+	FILE* file = fopen(filename,"r");
+	for(int line_count=0;fgets(buf,1024,file);++line_count){
+        string str1 = string(buf);
         set<string> *tmp = new set<string>();
         filetext[id].push_back(str1);
         int len = str1.length();
@@ -105,8 +104,8 @@ int SimJoiner::createJaccIDF(const char *filename, int id) {
             jaccIDF.addCount(str1.substr(pos, len - pos).c_str(), len - pos);
             tmp->insert(str1.substr(pos, len - pos));
         }
-        linewords[id][lineidx] = tmp;
-        lineidx++;
+        linewords[id][line_count] = tmp;
+        line_count++;
     }
     fin1.close();
     return SUCCESS;
@@ -195,13 +194,13 @@ int SimJoiner::createEDIndex(const char *filename, unsigned threshold) {
     EDshort.clear();
     ifstream fin(filename);
     char linechar[260];
-    int lineidx = 0;
+    int line_count = 0;
     while (fin.getline(linechar, 260))
     {
         int length = strlen(linechar);
         if (length < threshold + 1) {
-            EDshort.push_back(make_pair(linechar, lineidx));
-            lineidx++;
+            EDshort.push_back(make_pair(linechar, line_count));
+            line_count++;
             continue;
         }
         contexts.push_back(linechar);
@@ -216,10 +215,10 @@ int SimJoiner::createEDIndex(const char *filename, unsigned threshold) {
             auto it = edMap[length][i].find(h);
             if (it == edMap[length][i].end()) {
                 vector<int> *tempVec = new vector<int>();
-                tempVec->push_back(lineidx);
+                tempVec->push_back(line_count);
                 edMap[length][i][h] = tempVec;
             } else {
-                it->second->push_back(lineidx);
+                it->second->push_back(line_count);
             }
         }
         for (int j = 0; j < uptime; j++)
@@ -228,13 +227,13 @@ int SimJoiner::createEDIndex(const char *filename, unsigned threshold) {
             auto it = edMap[length][i + j].find(h);
             if (it == edMap[length][i + j].end()) {
                 vector<int> *tempVec = new vector<int>();
-                tempVec->push_back(lineidx);
+                tempVec->push_back(line_count);
                 edMap[length][i + j][h] = tempVec;
             } else {
-                it->second->push_back(lineidx);
+                it->second->push_back(line_count);
             }
         }
-        lineidx++;
+        line_count++;
     }
     fin.close();
     isRead = true;
