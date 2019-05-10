@@ -44,9 +44,16 @@ int Trie::insert_single_line(int num, const char *str, size_t len) {
 TrieNode* Trie::__insert_and_find(const char *str, size_t len) {
     TrieNode* node = root;
     for(int i = 0; i < len; ++i){
-        TrieNode*& newNode = node->child[(int)str[i]];
-        if(!newNode) {
+        TrieNode* newNode = nullptr;
+        for(auto nodepair : node->child){
+            if(nodepair.first == (int)str[i]){
+                newNode = nodepair.second;
+                break;
+            }
+        }
+        if(newNode == nullptr){
             newNode = new TrieNode();
+            node->child.emplace_back(std::make_pair((int)str[i], newNode));
         }
         node = newNode;
     }
@@ -60,7 +67,13 @@ TrieNode* Trie::__insert_and_find(const char *str, size_t len) {
 TrieNode* Trie::search(const char *str, size_t len) {
     TrieNode* node = root;
     for(int i = 0; i < len; ++i){
-        TrieNode* newNode = node->child[(int)str[i]];
+        TrieNode* newNode = nullptr;
+        for(auto nodepair : node->child){
+            if(nodepair.first == (int)str[i]){
+                newNode = nodepair.second;
+                break;
+            }
+        }
         if(!newNode) {
             return nullptr;
         }

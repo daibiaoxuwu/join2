@@ -13,7 +13,7 @@
 class TrieNode
 {
 public:
-    TrieNode** child;
+    std::vector<std::pair<int, TrieNode*>> child;
     //line numbers
     std::vector<int>* entries;
     //time(frequency) of their appearances
@@ -21,13 +21,10 @@ public:
     int newest_line_num = -1;
 
     TrieNode(){
-        child = new TrieNode*[128];
-        memset(child,0,128*sizeof(TrieNode*));
         entries = new std::vector<int>();
         entry_freq = new std::vector<int>();
     }
     ~TrieNode(){
-        delete[] child;
         delete entries;
         delete entry_freq;
     }
@@ -37,10 +34,8 @@ public:
     TrieNode* root;
     Trie() {root = new TrieNode();}
     void deleteNode(TrieNode* node){
-        for (int i = 0; i < 128; i++) {
-            if (node->child[i]) {
-                deleteNode(node->child[i]);
-            }
+        for (auto nodepair : node->child){
+            deleteNode(nodepair.second);
         }
         delete node;
     }
