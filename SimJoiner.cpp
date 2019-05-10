@@ -5,7 +5,7 @@ const int MY_MAX_INT = 0xffffff;
 
 struct index_len
 {
-    int index;
+    TrieNode* index;
     int len;
 
     bool operator< (const index_len& idl) const
@@ -74,10 +74,6 @@ inline EDJoinResult create_EDJoinResult(unsigned id1, unsigned id2, unsigned s){
 
 SimJoiner::SimJoiner() {
     aval_list = new bool[200010];
-    jaccList = new vector<int> *[1000000];
-    for (int i = 0; i < 1000000; i++) {
-        jaccList[i] = NULL;
-    }
 }
 
 SimJoiner::~SimJoiner() {
@@ -127,7 +123,7 @@ int SimJoiner::createJaccIndex(const char *filename1, const char *filename2, dou
             TrieNode* node = jaccIDF.search(s.c_str(), s.length());
             if(node){
                 idl.len = node->count;
-                idl.index = node->id;
+                idl.index = node;
                 vec_index.push_back(idl);
             }
         }
@@ -136,16 +132,7 @@ int SimJoiner::createJaccIndex(const char *filename1, const char *filename2, dou
         sort(vec_index.begin(), vec_index.end());
         int prelen = (1 - threshold) * linewords[1][i]->size() + 1;
         for (int j = 0; j < my_min(prelen, vec_index.size()); j++)
-        {
-            index_len &idl = vec_index[j];
-            if (!jaccList[idl.index]) {
-                vector<int>* listtmp = new vector<int>();
-                listtmp->push_back(i);
-                jaccList[idl.index] = listtmp;
-            } else {
-                jaccList[idl.index]->push_back(i);
-            }
-        }
+            vec_index[j].index->entries->push_back(i);
     }
 
     return SUCCESS;
@@ -166,6 +153,10 @@ int SimJoiner::joinJaccard(const char *filename1, const char *filename2, double 
     result.clear();
     jaccIDF.clean();
     createJaccIndex(filename1, filename2, threshold);
+
+    memset(aval_list, 0, 200010*sizeof(bool));
+
+
     int totalNum = linewords[0].size();
     for (int i = 0; i < totalNum; i++) {
         vector<index_len> vec_index;
@@ -174,7 +165,7 @@ int SimJoiner::joinJaccard(const char *filename1, const char *filename2, double 
             TrieNode* node = jaccIDF.search(s.c_str(), s.length());
             if(node){
                 idl.len = node->count;
-                idl.index = node->id;
+                idl.index = node;
                 vec_index.push_back(idl);
             }
         }
@@ -184,18 +175,16 @@ int SimJoiner::joinJaccard(const char *filename1, const char *filename2, double 
         int prelen = (1 - threshold) * linewords[0][i]->size() + 1;
         for (int j = 0; j < my_min(prelen, vec_index.size()); j++)
         {
-            index_len &idl = vec_index[j];
-            if (jaccList[idl.index]) {
-                for (auto& lineid : *jaccList[idl.index]) {
-                    double jacc = compute_jaccard(linewords[0][i], linewords[1][lineid], threshold);
-                    if (jacc >= threshold) 
-                        result.push_back(create_JaccardJoinResult(i, lineid, jacc));
-                }
+            for (auto& lineid : *(vec_index[j].index->entries)){
+                if(aval_list[lineid]) continue;
+                aval_list[lineid] = true;
+                double jacc = compute_jaccard(linewords[0][i], linewords[1][lineid], threshold);
+                if (jacc >= threshold) 
+                    result.push_back(create_JaccardJoinResult(i, lineid, jacc));
             }
         }
     }
     sort(result.begin(), result.end());
-    result.resize(unique(result.begin(), result.end()) - result.begin());
     return SUCCESS;
 }
 
