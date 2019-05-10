@@ -86,26 +86,15 @@ int SimJoiner::createJaccIDF(const char *filename, int id) {
         if(buf[strlen(buf)-1]=='\n') buf[strlen(buf)-1]='\0';
         string str1 = string(buf);
         set<string> *tmp = new set<string>();
-        int len = str1.length();
-        int pos = 0;
-        for (int j = 0; j < len; j++)
-        {
-            if(str1[j] == ' ')
-            {
-                if(pos < j)
-                {
-                    jaccIDF.addCount(str1.substr(pos, j - pos).c_str(), j - pos);
-                    tmp->insert(str1.substr(pos, j - pos));
-                }
-                pos = j + 1;
-            }
-        }
-        if (pos < len)
-        {
-            jaccIDF.addCount(str1.substr(pos, len - pos).c_str(), len - pos);
-            tmp->insert(str1.substr(pos, len - pos));
-        }
-        linewords[id][line_count] = tmp;
+
+	    char* pch = strtok (buf," \r\n");
+		while (pch != nullptr)
+		{
+			//if is unique
+            jaccIDF.addCount(str1.substr(pos, j - pos).c_str(), j - pos);
+			pch = strtok (nullptr, " \r\n");
+		}
+	
     }
     fclose(file);
     return SUCCESS;
