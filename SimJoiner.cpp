@@ -116,28 +116,9 @@ int SimJoiner::createEDIndex(const char *filename, unsigned threshold) {
         int prefix_len = length - uptime * step_u;
         int i;
         for (i = 0; i * step_d < prefix_len; i++)
-        {
-            edTrie[length][i].insert_multiple_unique(buf + i * step_d, step_d);
-            if (it == edTrie[length][i].end()) {
-                vector<int> *tempVec = new vector<int>();
-                tempVec->push_back(line_count);
-                edTrie[length][i][h] = tempVec;
-            } else {
-                it->second->push_back(line_count);
-            }
-        }
+            edTrie[length][i].insert_multiple_unique(line_count, buf + i * step_d, step_d);
         for (int j = 0; j < uptime; j++)
-        {
-            unsigned long long h = my_hash(buf + i * step_d + j * step_u, step_u);
-            auto it = edTrie[length][i + j].find(h);
-            if (it == edTrie[length][i + j].end()) {
-                vector<int> *tempVec = new vector<int>();
-                tempVec->push_back(line_count);
-                edTrie[length][i + j][h] = tempVec;
-            } else {
-                it->second->push_back(line_count);
-            }
-        }
+            edTrie[length][i + j].insert_multiple_unique(line_count, buf + i * step_d + j * step_u, step_u);
     }
     isRead = true;
     return SUCCESS;
@@ -185,8 +166,7 @@ int SimJoiner::searchED(const char *query, unsigned threshold, std::vector<std::
     int lowerbound = my_max(0, lineLength - threshold);
     for (int length = lowerbound; length <= upperbound; length++)
     {
-        if (edTrie[length][0].empty())
-            continue;
+        for(int it = 0; it < 128; ++it) if (edTrie[length][0].root->child[it]!=nullptr){
         int step_d = length / (threshold + 1);
         int uptime = length - step_d * (threshold + 1);
         int step_u = uptime > 0 ? (step_d + 1) : step_d;
@@ -199,10 +179,9 @@ int SimJoiner::searchED(const char *query, unsigned threshold, std::vector<std::
             int start = max_3(p - i, p + delta - ((int)threshold - i), 0);
             int end = min_3(p + i, p + delta + ((int)threshold - i), lineLength - step_d);
             for (int strid = start; strid <= end; strid++) {
-                unsigned long long hash = my_hash(query + strid, step_d);
-                vector<int> *listptr = edTrie[length][i][hash];
-                if (listptr) {
-                    for (auto& candi : *listptr) {
+                TrieNode*  node = edTrie[length][i].search(query + strid, step_d);
+                if (node) {
+                    for (auto& candi : *(node->entries)) {
                         if (time_count[candi] != global_time) {
                             time_count[candi] = global_time;
                             unsigned ed = compute_ed(query, lineLength, lines[candi].c_str(), lines[candi].length(), threshold);
@@ -222,11 +201,9 @@ int SimJoiner::searchED(const char *query, unsigned threshold, std::vector<std::
             int end = min_3(p + i + j, p + delta + ((int)threshold - i - j), lineLength - step_u);
             for (int strid = start; strid <= end; strid++)
             {
-                unsigned long long hash = my_hash(query + strid, step_u);
-                vector<int> *listptr = edTrie[length][i + j][hash];
-                if (listptr)
-                {
-                    for (auto &candi : *listptr)
+                TrieNode*  node =edTrie[length][i + j].search(query + strid, step_u);
+                if (node) {
+                    for (auto& candi : *(node->entries))
                     {
                         if (time_count[candi] != global_time) {
                             time_count[candi] = global_time;
@@ -239,6 +216,7 @@ int SimJoiner::searchED(const char *query, unsigned threshold, std::vector<std::
                 }
             }
         }
+        }
     }
     return SUCCESS;
 }
@@ -248,7 +226,7 @@ int SimJoiner::joinED(const char *filename1, const char *filename2, unsigned thr
 
     for(int i = 0; i < 258; ++i){
         for(int j=0; j<10; ++j){
-            edTrie[i][j].clear();
+            edTrie[i][j].clean();
         }
     }
 
@@ -271,14 +249,14 @@ int SimJoiner::joinED(const char *filename1, const char *filename2, unsigned thr
     		temp.s = it.second;
     		result.push_back(temp);
     	}
-        for (auto& lines_short : lines_short) {
-            string &shortstr = lines_short.first;
+        for (auto& lines : lines_short) {
+            string &shortstr = lines.first;
             int ed;
             if ((ed = compute_ed(str.c_str(), str.length(), shortstr.c_str(), shortstr.length(), threshold)) <= threshold)
             {
                 EDJoinResult temp;
                 temp.id1 = id1;
-                temp.id2 = lines_short.second;
+                temp.id2 = lines.second;
                 temp.s = ed;
                 result.push_back(temp);
             }

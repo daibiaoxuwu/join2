@@ -33,8 +33,8 @@ public:
     }
 };
 class Trie {
-    TrieNode* root;
 public:
+    TrieNode* root;
     Trie() {root = new TrieNode();}
     void deleteNode(TrieNode* node){
         for (int i = 0; i < 128; i++) {
@@ -48,6 +48,10 @@ public:
     ~Trie(){
         deleteNode(root);
     }
+    void clean(){
+    	deleteNode(root);
+    	root = new TrieNode();
+	}
     TrieNode* __insert_and_find(const char*, size_t);
     bool insert_multiple_unique(int num, const char *str, size_t len);
     int insert_single_line(int num, const char *str, size_t len);
