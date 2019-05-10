@@ -154,11 +154,11 @@ int SimJoiner::joinJaccard(const char *filename1, const char *filename2, double 
     jaccIDF.clean();
     createJaccIndex(filename1, filename2, threshold);
 
-    memset(aval_list, 0, 200010*sizeof(bool));
 
 
     int totalNum = linewords[0].size();
     for (int i = 0; i < totalNum; i++) {
+        memset(aval_list, 0, 200010*sizeof(bool));
         vector<index_len> vec_index;
         for (auto &s : *(linewords[0][i])) {
             index_len idl;
