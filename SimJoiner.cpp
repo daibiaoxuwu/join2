@@ -168,7 +168,8 @@ int SimJoiner::joinJaccard(const char *filename1, const char *filename2, double 
         memset(aval_list, 0, 200010*sizeof(bool));
 
         vector<index_len> vec_index;
-        char* pch = strtok (jaclines[0][i]," \r\n");
+        char temp[258];memcpy(temp, jaclines[0][i], 258);
+        char* pch = strtok (temp," \r\n");
 		while (pch != nullptr)
 		{
 			//if is unique
