@@ -82,6 +82,7 @@ int SimJoiner::createJaccIDF(const char *filename, int id) {
     char buf[1024];
 	FILE* file = fopen(filename,"r");
 	for(int line_count=0;fgets(buf,1024,file);++line_count){
+        if(buf[strlen(buf)-1]=='\n') buf[strlen(buf)-1]='\0';
         string str1 = string(buf);
         set<string> *tmp = new set<string>();
         int len = str1.length();
@@ -198,7 +199,7 @@ int SimJoiner::createEDIndex(const char *filename, unsigned threshold) {
 
     FILE* file = fopen(filename,"r");
 	for(line_count=0;fgets(buf,1024,file);++line_count){
-
+        if(buf[strlen(buf)-1]=='\n') buf[strlen(buf)-1]='\0';
         int length = strlen(buf);
         if (length < threshold + 1) {
             lines_short.push_back(make_pair(buf, line_count));
