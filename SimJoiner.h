@@ -13,140 +13,141 @@
 #include <cstring>
 #include <iostream>
 #include <functional>
+#include "Trie.h"
 
 using namespace std;
 
-struct TrieNode
-{
-    bool exist;
-    TrieNode *child[128];
-    std::vector<int> indexVec;
-    int count;
-    int id;
+// struct TrieNode
+// {
+//     bool exist;
+//     TrieNode *child[128];
+//     std::vector<int> indexVec;
+//     int count;
+//     int id;
 
-    TrieNode() : exist(false), count(0), id(0)
-    {
-        for (int i = 0; i < 128; i++)
-            child[i] = NULL;
-        indexVec.clear();
-    }
-};
+//     TrieNode() : exist(false), count(0), id(0)
+//     {
+//         for (int i = 0; i < 128; i++)
+//             child[i] = NULL;
+//         indexVec.clear();
+//     }
+// };
 
-struct Trie
-{
-    TrieNode* root;
-    bool empty;
-    int total;
+// struct Trie
+// {
+//     TrieNode* root;
+//     bool empty;
+//     int total;
 
-    Trie() {
-        total = 0;
-        root = new TrieNode();
-        empty = true;
-    }
+//     Trie() {
+//         total = 0;
+//         root = new TrieNode();
+//         empty = true;
+//     }
 
-    void insert(const char* str, int len, int line) {
-        TrieNode *node = root;
-        for (int i = 0; i < len; i++) {
-            if (!node->child[(int)str[i]]) {
-                node->child[(int)str[i]] = new TrieNode();
-            }
-            node = node->child[(int)str[i]];
-        }
-        node->exist = true;
-        if (node->indexVec.empty() || *(node->indexVec.end() - 1) != line)
-            node->indexVec.push_back(line);
-        empty = false;
-    }
+//     void insert(const char* str, int len, int line) {
+//         TrieNode *node = root;
+//         for (int i = 0; i < len; i++) {
+//             if (!node->child[(int)str[i]]) {
+//                 node->child[(int)str[i]] = new TrieNode();
+//             }
+//             node = node->child[(int)str[i]];
+//         }
+//         node->exist = true;
+//         if (node->indexVec.empty() || *(node->indexVec.end() - 1) != line)
+//             node->indexVec.push_back(line);
+//         empty = false;
+//     }
 
-    std::vector<int>* search(const char* str, int len) {
-        TrieNode *node = root;
-        for (int i = 0; i < len; i++) {
-            if(!node->child[(int)str[i]])
-                return NULL;
-            node = node->child[(int)str[i]];
-        }
-        if (!node)
-            return NULL;
-        if (!node->exist)
-            return NULL;
-        return &(node->indexVec);
-    }
+//     std::vector<int>* search(const char* str, int len) {
+//         TrieNode *node = root;
+//         for (int i = 0; i < len; i++) {
+//             if(!node->child[(int)str[i]])
+//                 return NULL;
+//             node = node->child[(int)str[i]];
+//         }
+//         if (!node)
+//             return NULL;
+//         if (!node->exist)
+//             return NULL;
+//         return &(node->indexVec);
+//     }
 
-    int addCount(const char *str, int len) {
-        TrieNode *node = root;
-        for (int i = 0; i < len; i++) {
-            if (!node->child[(int)str[i]]) {
-                node->child[(int)str[i]] = new TrieNode();
-            }
-            node = node->child[(int)str[i]];
-        }
-        int ret;
-        if (!node->exist)
-        {
-            total++;
-            ret = total;
-            node->id = total;
-            node->exist = true;
-        } else {
-            ret = node->id;
-        }
-        node->count++;
-        empty = false;
-        return ret;
-    }
+//     int addCount(const char *str, int len) {
+//         TrieNode *node = root;
+//         for (int i = 0; i < len; i++) {
+//             if (!node->child[(int)str[i]]) {
+//                 node->child[(int)str[i]] = new TrieNode();
+//             }
+//             node = node->child[(int)str[i]];
+//         }
+//         int ret;
+//         if (!node->exist)
+//         {
+//             total++;
+//             ret = total;
+//             node->id = total;
+//             node->exist = true;
+//         } else {
+//             ret = node->id;
+//         }
+//         node->count++;
+//         empty = false;
+//         return ret;
+//     }
 
-    int count(const char *str, int len) {
-        TrieNode *node = root;
-        for (int i = 0; i < len; i++) {
-            if(!node->child[(int)str[i]])
-                return -1;
-            node = node->child[(int)str[i]];
-        }
-        if (!node)
-            return -1;
-        if (!node->exist)
-            return -1;
-        return node->count;
-    }
+//     int count(const char *str, int len) {
+//         TrieNode *node = root;
+//         for (int i = 0; i < len; i++) {
+//             if(!node->child[(int)str[i]])
+//                 return -1;
+//             node = node->child[(int)str[i]];
+//         }
+//         if (!node)
+//             return -1;
+//         if (!node->exist)
+//             return -1;
+//         return node->count;
+//     }
 
-    int getID(const char *str, int len) {
-        TrieNode *node = root;
-        for (int i = 0; i < len; i++) {
-            if(!node->child[(int)str[i]])
-                return -1;
-            node = node->child[(int)str[i]];
-        }
-        if (!node)
-            return -1;
-        if (!node->exist)
-            return -1;
-        return node->id;
-    }
+//     int getID(const char *str, int len) {
+//         TrieNode *node = root;
+//         for (int i = 0; i < len; i++) {
+//             if(!node->child[(int)str[i]])
+//                 return -1;
+//             node = node->child[(int)str[i]];
+//         }
+//         if (!node)
+//             return -1;
+//         if (!node->exist)
+//             return -1;
+//         return node->id;
+//     }
 
-    void init() {
-        total = 0;
-        root = new TrieNode();
-        empty = true;
-    }
+//     void init() {
+//         total = 0;
+//         root = new TrieNode();
+//         empty = true;
+//     }
 
-    bool isEmpty() {
-        return empty;
-    }
+//     bool isEmpty() {
+//         return empty;
+//     }
 
-    int getNum() {
-        return total;
-    }
+//     int getNum() {
+//         return total;
+//     }
 
-    void print() {
-        TrieNode *node = root;
-        for (int i = 0; i < 128; i++) {
-            if(!node->child[i])
-                continue;
-            char a = i;
-            cout << a << endl;
-        }
-    }
-};
+//     void print() {
+//         TrieNode *node = root;
+//         for (int i = 0; i < 128; i++) {
+//             if(!node->child[i])
+//                 continue;
+//             char a = i;
+//             cout << a << endl;
+//         }
+//     }
+// };
 
 
 template <typename IDType, typename SimType>
@@ -173,14 +174,14 @@ class SimJoiner {
 public:
 
     bool isRead;
-    unordered_map<unsigned long long, vector<int> *> edMap[260][10];
+    // unordered_map<unsigned long long, vector<int> *> edMap[258][10];
+    Trie edTrie[258][10];
     Trie jaccIDF;
     unordered_map<int, set<string>*> linewords[2];
     vector<int> **jaccList;
 
-    vector<string> contexts;
-    vector<string> filetext[2];
-    vector<pair<string, int>> EDshort;
+    vector<string> lines;
+    vector<pair<string, int>> lines_short;
     int global_time;
     int *time_count;
     int createEDIndex(const char *filename, unsigned threshold);

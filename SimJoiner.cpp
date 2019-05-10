@@ -79,131 +79,37 @@ SimJoiner::~SimJoiner() {
 }
 
 int SimJoiner::createJaccIDF(const char *filename, int id) {
-    char buf[1024];
-	FILE* file = fopen(filename,"r");
-	for(int line_count=0;fgets(buf,1024,file);++line_count){
-        string str1 = string(buf);
-        set<string> *tmp = new set<string>();
-        filetext[id].push_back(str1);
-        int len = str1.length();
-        int pos = 0;
-        for (int j = 0; j < len; j++)
-        {
-            if(str1[j] == ' ')
-            {
-                if(pos < j)
-                {
-                    jaccIDF.addCount(str1.substr(pos, j - pos).c_str(), j - pos);
-                    tmp->insert(str1.substr(pos, j - pos));
-                }
-                pos = j + 1;
-            }
-        }
-        if (pos < len)
-        {
-            jaccIDF.addCount(str1.substr(pos, len - pos).c_str(), len - pos);
-            tmp->insert(str1.substr(pos, len - pos));
-        }
-        linewords[id][line_count] = tmp;
-        line_count++;
-    }
-    fin1.close();
-    return SUCCESS;
 }
 
 int SimJoiner::createJaccIndex(const char *filename1, const char *filename2, double threshold) {
-    createJaccIDF(filename1, 0);
-    createJaccIDF(filename2, 1);
-    int totalNum = linewords[1].size();
-    for (int i = 0; i < totalNum; i++)
-    {
-        vector<index_len> vec_index;
-        for (auto &s : *(linewords[1][i])) {
-            index_len idl;
-            idl.len = jaccIDF.count(s.c_str(), s.length());
-            idl.index = jaccIDF.getID(s.c_str(), s.length());
-            vec_index.push_back(idl);
-        }
-        sort(vec_index.begin(), vec_index.end());
-        int prelen = (1 - threshold) * linewords[1][i]->size() + 1;
-        for (int j = 0; j < prelen; j++)
-        {
-            index_len &idl = vec_index[j];
-            if (!jaccList[idl.index]) {
-                vector<int>* listtmp = new vector<int>();
-                listtmp->push_back(i);
-                jaccList[idl.index] = listtmp;
-            } else {
-                jaccList[idl.index]->push_back(i);
-            }
-        }
-    }
-
-    return SUCCESS;
 }
 
 double SimJoiner::compute_jaccard(set<string> *l1, set<string> *l2, double threshold)
 {
-    int cnt = 0;
-    for (auto& w : *l1)
-    {
-        if (l2->find(w) != l2->end())
-            cnt++;
-    }
-    return ((double)cnt / (double)(l1->size() + l2->size() - cnt));
 }
 
 int SimJoiner::joinJaccard(const char *filename1, const char *filename2, double threshold, vector<JaccardJoinResult> &result) {
     result.clear();
-    createJaccIndex(filename1, filename2, threshold);
-    int totalNum = linewords[0].size();
-    for (int i = 0; i < totalNum; i++) {
-        vector<index_len> vec_index;
-        for (auto &s : *(linewords[0][i])) {
-            index_len idl;
-            idl.len = jaccIDF.count(s.c_str(), s.length());
-            idl.index = jaccIDF.getID(s.c_str(), s.length());
-            vec_index.push_back(idl);
-        }
-        sort(vec_index.begin(), vec_index.end());
-        int prelen = (1 - threshold) * linewords[0][i]->size() + 1;
-        for (int j = 0; j < prelen; j++)
-        {
-            index_len &idl = vec_index[j];
-            if (jaccList[idl.index]) {
-                for (auto& lineid : *jaccList[idl.index]) {
-                    double jacc = compute_jaccard(linewords[0][i], linewords[1][lineid], threshold);
-                    if (jacc >= threshold) {
-                        JaccardJoinResult temp;
-                        temp.id1 = i;
-                        temp.id2 = lineid;
-                        temp.s = jacc;
-                        result.push_back(temp);
-                    }
-                }
-            }
-        }
-    }
-    sort(result.begin(), result.end());
-    result.resize(unique(result.begin(), result.end()) - result.begin());
+  
     return SUCCESS;
 }
 
 int SimJoiner::createEDIndex(const char *filename, unsigned threshold) {
-    contexts.clear();
-    EDshort.clear();
-    ifstream fin(filename);
-    char linechar[260];
+    lines.clear();
+    lines_short.clear();
+
+    char buf[1024];
     int line_count = 0;
-    while (fin.getline(linechar, 260))
-    {
-        int length = strlen(linechar);
+
+    FILE* file = fopen(filename,"r");
+	for(line_count=0;fgets(buf,1024,file);++line_count){
+
+        int length = strlen(buf);
         if (length < threshold + 1) {
-            EDshort.push_back(make_pair(linechar, line_count));
-            line_count++;
+            lines_short.push_back(make_pair(buf, line_count));
             continue;
         }
-        contexts.push_back(linechar);
+        lines.push_back(buf);
         int step_d = length / (threshold + 1);
         int uptime = length - step_d * (threshold + 1);
         int step_u = uptime > 0 ? (step_d + 1) : step_d;
@@ -211,31 +117,28 @@ int SimJoiner::createEDIndex(const char *filename, unsigned threshold) {
         int i;
         for (i = 0; i * step_d < prefix_len; i++)
         {
-            unsigned long long h = my_hash(linechar + i * step_d, step_d);
-            auto it = edMap[length][i].find(h);
-            if (it == edMap[length][i].end()) {
+            edTrie[length][i].insert_multiple_unique(buf + i * step_d, step_d);
+            if (it == edTrie[length][i].end()) {
                 vector<int> *tempVec = new vector<int>();
                 tempVec->push_back(line_count);
-                edMap[length][i][h] = tempVec;
+                edTrie[length][i][h] = tempVec;
             } else {
                 it->second->push_back(line_count);
             }
         }
         for (int j = 0; j < uptime; j++)
         {
-            unsigned long long h = my_hash(linechar + i * step_d + j * step_u, step_u);
-            auto it = edMap[length][i + j].find(h);
-            if (it == edMap[length][i + j].end()) {
+            unsigned long long h = my_hash(buf + i * step_d + j * step_u, step_u);
+            auto it = edTrie[length][i + j].find(h);
+            if (it == edTrie[length][i + j].end()) {
                 vector<int> *tempVec = new vector<int>();
                 tempVec->push_back(line_count);
-                edMap[length][i + j][h] = tempVec;
+                edTrie[length][i + j][h] = tempVec;
             } else {
                 it->second->push_back(line_count);
             }
         }
-        line_count++;
     }
-    fin.close();
     isRead = true;
     return SUCCESS;
 }
@@ -282,7 +185,7 @@ int SimJoiner::searchED(const char *query, unsigned threshold, std::vector<std::
     int lowerbound = my_max(0, lineLength - threshold);
     for (int length = lowerbound; length <= upperbound; length++)
     {
-        if (edMap[length][0].empty())
+        if (edTrie[length][0].empty())
             continue;
         int step_d = length / (threshold + 1);
         int uptime = length - step_d * (threshold + 1);
@@ -297,12 +200,12 @@ int SimJoiner::searchED(const char *query, unsigned threshold, std::vector<std::
             int end = min_3(p + i, p + delta + ((int)threshold - i), lineLength - step_d);
             for (int strid = start; strid <= end; strid++) {
                 unsigned long long hash = my_hash(query + strid, step_d);
-                vector<int> *listptr = edMap[length][i][hash];
+                vector<int> *listptr = edTrie[length][i][hash];
                 if (listptr) {
                     for (auto& candi : *listptr) {
                         if (time_count[candi] != global_time) {
                             time_count[candi] = global_time;
-                            unsigned ed = compute_ed(query, lineLength, contexts[candi].c_str(), contexts[candi].length(), threshold);
+                            unsigned ed = compute_ed(query, lineLength, lines[candi].c_str(), lines[candi].length(), threshold);
                             if (ed <= threshold)
                             {
                                 result.push_back(make_pair(candi, ed));
@@ -320,14 +223,14 @@ int SimJoiner::searchED(const char *query, unsigned threshold, std::vector<std::
             for (int strid = start; strid <= end; strid++)
             {
                 unsigned long long hash = my_hash(query + strid, step_u);
-                vector<int> *listptr = edMap[length][i + j][hash];
+                vector<int> *listptr = edTrie[length][i + j][hash];
                 if (listptr)
                 {
                     for (auto &candi : *listptr)
                     {
                         if (time_count[candi] != global_time) {
                             time_count[candi] = global_time;
-                            unsigned ed = compute_ed(query, lineLength, contexts[candi].c_str(), contexts[candi].length(), threshold);
+                            unsigned ed = compute_ed(query, lineLength, lines[candi].c_str(), lines[candi].length(), threshold);
                             if (ed <= threshold) {
                                 result.push_back(make_pair(candi, ed));
                             }
@@ -342,6 +245,16 @@ int SimJoiner::searchED(const char *query, unsigned threshold, std::vector<std::
 
 int SimJoiner::joinED(const char *filename1, const char *filename2, unsigned threshold, vector<EDJoinResult> &result) {
     result.clear();
+
+    for(int i = 0; i < 258; ++i){
+        for(int j=0; j<10; ++j){
+            edTrie[i][j].clear();
+        }
+    }
+
+
+
+
     createEDIndex(filename2, threshold);
     ifstream fin(filename1);
     string str;
@@ -358,14 +271,14 @@ int SimJoiner::joinED(const char *filename1, const char *filename2, unsigned thr
     		temp.s = it.second;
     		result.push_back(temp);
     	}
-        for (auto& edshort : EDshort) {
-            string &shortstr = edshort.first;
+        for (auto& lines_short : lines_short) {
+            string &shortstr = lines_short.first;
             int ed;
             if ((ed = compute_ed(str.c_str(), str.length(), shortstr.c_str(), shortstr.length(), threshold)) <= threshold)
             {
                 EDJoinResult temp;
                 temp.id1 = id1;
-                temp.id2 = edshort.second;
+                temp.id2 = lines_short.second;
                 temp.s = ed;
                 result.push_back(temp);
             }
