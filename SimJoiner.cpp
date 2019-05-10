@@ -135,13 +135,18 @@ int SimJoiner::createJaccIndex(const char *filename1, const char *filename2, dou
         vector<index_len> vec_index;
         for (auto &s : *(linewords[1][i])) {
             index_len idl;
-            idl.len = jaccIDF.search(s.c_str(), s.length())->count;
-            idl.index = jaccIDF.search(s.c_str(), s.length())->id;
-            vec_index.push_back(idl);
+            TrieNode* node = jaccIDF.search(s.c_str(), s.length());
+            if(node){
+                idl.len = node->count;
+                idl.index = node->id;
+                vec_index.push_back(idl);
+            }
         }
+        //在文件1的 第i行里选取全局最高频率那1-thresh个
+        //到排表: 词汇名->行数
         sort(vec_index.begin(), vec_index.end());
         int prelen = (1 - threshold) * linewords[1][i]->size() + 1;
-        for (int j = 0; j < prelen; j++)
+        for (int j = 0; j < my_min(prelen, vec_index.size()); j++)
         {
             index_len &idl = vec_index[j];
             if (!jaccList[idl.index]) {
@@ -177,13 +182,18 @@ int SimJoiner::joinJaccard(const char *filename1, const char *filename2, double 
         vector<index_len> vec_index;
         for (auto &s : *(linewords[0][i])) {
             index_len idl;
-            idl.len = jaccIDF.search(s.c_str(), s.length())->count;
-            idl.index = jaccIDF.search(s.c_str(), s.length())->id;
-            vec_index.push_back(idl);
+            TrieNode* node = jaccIDF.search(s.c_str(), s.length());
+            if(node){
+                idl.len = node->count;
+                idl.index = node->id;
+                vec_index.push_back(idl);
+            }
         }
+        //在文件0的 第i行里选取全局最高频率那1-thresh个
+        //到排表: 词汇名->行数
         sort(vec_index.begin(), vec_index.end());
         int prelen = (1 - threshold) * linewords[0][i]->size() + 1;
-        for (int j = 0; j < prelen; j++)
+        for (int j = 0; j < my_min(prelen, vec_index.size()); j++)
         {
             index_len &idl = vec_index[j];
             if (jaccList[idl.index]) {
