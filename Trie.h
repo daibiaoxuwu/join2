@@ -38,6 +38,8 @@ public:
 class Trie {
 public:
     TrieNode* root;
+    bool last_is_new;
+
     int total = 0;
     Trie() {root = new TrieNode();}
     void deleteNode(TrieNode* node){
@@ -54,7 +56,7 @@ public:
     	deleteNode(root);
     	root = new TrieNode();
 	}
-    int addCount(const char*, size_t);
+    bool addCount(const char*, size_t);
     TrieNode* __insert_and_find(const char*, size_t);
     bool insert_multiple_unique(int num, const char *str, size_t len);
     int insert_single_line(int num, const char *str, size_t len);

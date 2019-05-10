@@ -180,7 +180,11 @@ public:
     unordered_map<int, set<string>*> linewords[2];
     vector<int> **jaccList;
 
+    int line_count[2];
+    int* word_count[2];
+
     vector<string> lines;
+    vector<char*> jaclines[2];
     vector<pair<string, int>> lines_short;
     int global_time;
     bool *aval_list;

@@ -70,28 +70,38 @@ inline EDJoinResult create_EDJoinResult(unsigned id1, unsigned id2, unsigned s){
     result.s = s;
     return result;
 }
-
-
 SimJoiner::SimJoiner() {
     aval_list = new bool[200010];
+      word_count[0] = new int[200010];
+        word_count[1] = new int[200010];
 }
 
 SimJoiner::~SimJoiner() {
 }
 
 int SimJoiner::createJaccIDF(const char *filename, int id) {
+
+    for(char* i : jaclines[id]) delete[] i;
+    jaclines[id].clear();
+    
+    memset(word_count[id],0,200010*sizeof(int));
     char buf[1024];
 	FILE* file = fopen(filename,"r");
-	for(int line_count=0;fgets(buf,1024,file);++line_count){
+	for(line_count[id]=0;fgets(buf,1024,file);++line_count[id]){
+
+
         if(buf[strlen(buf)-1]=='\n') buf[strlen(buf)-1]='\0';
-        string str1 = string(buf);
-        set<string> *tmp = new set<string>();
+
+        char* buf2 = new char[258];
+        memcpy(buf2, buf, strlen(buf));
+        jaclines[id].push_back(buf2);
+
 
 	    char* pch = strtok (buf," \r\n");
 		while (pch != nullptr)
 		{
 			//if is unique
-            jaccIDF.addCount(str1.substr(pos, j - pos).c_str(), j - pos);
+            if(jaccIDF.addCount(pch, strlen(pch))) word_count[id][line_count[id]]++;
 			pch = strtok (nullptr, " \r\n");
 		}
 	
@@ -103,23 +113,32 @@ int SimJoiner::createJaccIDF(const char *filename, int id) {
 int SimJoiner::createJaccIndex(const char *filename1, const char *filename2, double threshold) {
     createJaccIDF(filename1, 0);
     createJaccIDF(filename2, 1);
-    int totalNum = linewords[1].size();
-    for (int i = 0; i < totalNum; i++)
+    for (int i = 0; i < line_count[1]; i++)
     {
         vector<index_len> vec_index;
-        for (auto &s : *(linewords[1][i])) {
-            index_len idl;
-            TrieNode* node = jaccIDF.search(s.c_str(), s.length());
+        char* pch = strtok (jaclines[1][i]," \r\n");
+		while (pch != nullptr)
+		{
+			//if is unique
+            TrieNode* node = jaccIDF.search(pch, strlen(pch));
             if(node){
+                if(node->id == i) continue;
+                node->id = i;
+                index_len idl;
                 idl.len = node->count;
                 idl.index = node;
                 vec_index.push_back(idl);
             }
-        }
+
+
+			pch = strtok (nullptr, " \r\n");
+
+		}
+       
         //在文件1的 第i行里选取全局最高频率那1-thresh个
         //到排表: 词汇名->行数
         sort(vec_index.begin(), vec_index.end());
-        int prelen = (1 - threshold) * linewords[1][i]->size() + 1;
+        int prelen = (1 - threshold) * word_count[1][i] + 1;
         for (int j = 0; j < my_min(prelen, vec_index.size()); j++)
             vec_index[j].index->entries->push_back(i);
     }
@@ -145,23 +164,33 @@ int SimJoiner::joinJaccard(const char *filename1, const char *filename2, double 
 
 
 
-    int totalNum = linewords[0].size();
-    for (int i = 0; i < totalNum; i++) {
+    for (int i = 0; i < line_count[0]; i++) {
         memset(aval_list, 0, 200010*sizeof(bool));
+
         vector<index_len> vec_index;
-        for (auto &s : *(linewords[0][i])) {
-            index_len idl;
-            TrieNode* node = jaccIDF.search(s.c_str(), s.length());
+        char* pch = strtok (jaclines[0][i]," \r\n");
+		while (pch != nullptr)
+		{
+			//if is unique
+            TrieNode* node = jaccIDF.search(pch, strlen(pch));
             if(node){
+                if(node->id == -i) continue;
+                node->id = -i;
+                index_len idl;
                 idl.len = node->count;
                 idl.index = node;
                 vec_index.push_back(idl);
             }
-        }
+
+
+			pch = strtok (nullptr, " \r\n");
+
+		}
+
         //在文件0的 第i行里选取全局最高频率那1-thresh个
         //到排表: 词汇名->行数
         sort(vec_index.begin(), vec_index.end());
-        int prelen = (1 - threshold) * linewords[0][i]->size() + 1;
+        int prelen = (1 - threshold) * word_count[0][i] + 1;
         for (int j = 0; j < my_min(prelen, vec_index.size()); j++)
         {
             for (auto& lineid : *(vec_index[j].index->entries)){

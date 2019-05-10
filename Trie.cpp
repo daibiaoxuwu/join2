@@ -31,12 +31,11 @@ bool Trie::insert_multiple_unique(int num, const char *str, size_t len) {
 
     //this line has this word
 }
-int Trie::addCount(const char *str, size_t len) {
+bool Trie::addCount(const char *str, size_t len) {
     TrieNode* node = __insert_and_find(str,len);
 
-    if(node->id==-1) node->id = ++total;
     node->count++;
-    return node->id;
+    return last_is_new;
 }
 
 
@@ -58,10 +57,12 @@ TrieNode* Trie::__insert_and_find(const char *str, size_t len) {
         for(auto nodepair : node->child){
             if(nodepair.first == (int)str[i]){
                 newNode = nodepair.second;
+                last_is_new = false;
                 break;
             }
         }
         if(newNode == nullptr){
+            last_is_new = true;
             newNode = new TrieNode();
             node->child.emplace_back(std::make_pair((int)str[i], newNode));
         }
