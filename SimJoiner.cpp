@@ -192,17 +192,45 @@ int SimJoiner::joinJaccard(const char *filename1, const char *filename2, double 
         //到排表: 词汇名->行数
         sort(vec_index.begin(), vec_index.end());
         int prelen = (1 - threshold) * word_count[0][i] + 1;
+        Trie jacTrie;
         for (int j = 0; j < my_min(prelen, vec_index.size()); j++)
         {
             for (auto& lineid : *(vec_index[j].index->entries)){
                 if(aval_list[lineid]) continue;
                 aval_list[lineid] = true;
-                double jacc = compute_jaccard(linewords[0][i], linewords[1][lineid], threshold);
-                if (jacc >= threshold) 
-                    result.push_back(create_JaccardJoinResult(i, lineid, jacc));
+
+                char temp[258];memcpy(temp, jaclines[1][lineid], 258);
+                char* pch = strtok (temp," \r\n");
+                while (pch != nullptr){
+                    jacTrie.insert_multiple_unique(lineid, pch, strlen(pch));
+                    pch = strtok (nullptr, " \r\n");
+                }
+            }
+        }
+        int* same = new int[200010];
+        memset(same,0,200010*sizeof(int));
+        memcpy(temp, jaclines[0][i], 258);
+        Trie query_trie;
+        pch = strtok (temp," \r\n");
+        while (pch != nullptr){
+            if(query_trie.insert_single_line(0, pch, strlen(pch)) == -1){
+                TrieNode* search_result = jacTrie.search(pch, strlen(pch));
+                if(search_result != nullptr){
+                    //find a same word. add 1 to all lines containing this word.
+                    for (int it2 : *(search_result->entries)) ++same[it2];
+                }
+                pch = strtok (nullptr, " \r\n");
+            }
+        }
+        for(int i2 = 0; i2 < line_count[1]; ++i2){
+            if(aval_list[i2]){
+                double jaccard = same[i2] / (double)(word_count[0][i] + word_count[1][i2] - same[i2]);
+                if(jaccard>=threshold)
+                    result.emplace_back(create_JaccardJoinResult(i, i2, jaccard));
             }
         }
     }
+    
     sort(result.begin(), result.end());
     return SUCCESS;
 }

@@ -30,6 +30,7 @@ bool Trie::insert_multiple_unique(int num, const char *str, size_t len) {
     // }
 
     //this line has this word
+    return true;
 }
 bool Trie::addCount(const char *str, size_t len) {
     TrieNode* node = __insert_and_find(str,len);
