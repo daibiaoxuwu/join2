@@ -227,11 +227,11 @@ int SimJoiner::createEDIndex(const char *filename, unsigned threshold) {
 	for(line_count=0;fgets(buf,1024,file);++line_count){
         if(buf[strlen(buf)-1]=='\n') buf[strlen(buf)-1]='\0';
         int length = strlen(buf);
-        lines.push_back(buf);
-        if (length < threshold + 1) {
-            lines_short.push_back(make_pair(buf, line_count));
-            continue;
-        }
+        lines.push_back(string(buf));
+        // if (length < threshold + 1) {
+        //     lines_short.push_back(make_pair(string(buf), line_count));
+        //     continue;
+        // }
         int step_d = length / (threshold + 1);
         int uptime = length - step_d * (threshold + 1);
         int step_u = uptime > 0 ? (step_d + 1) : step_d;
@@ -284,55 +284,51 @@ int SimJoiner::searchED(const char *query, int id1, unsigned threshold,  vector<
     memset(aval_list, 0, 200010*sizeof(bool));
 
     global_time++;
-    result.clear();
     int lineLength = strlen(query);
     int upperbound = my_min(lineLength + threshold, 256);
     int lowerbound = my_max(0, lineLength - threshold);
     for (int length = lowerbound; length <= upperbound; length++)
     {
-        if (!edTrie[length][0].root->child.empty() || edTrie[length][0].root->count!=0)
-		{
-	        int step_d = length / (threshold + 1);
-	        int uptime = length - step_d * (threshold + 1);
-	        int step_u = uptime > 0 ? (step_d + 1) : step_d;
-	        int prefix_len = length - uptime * step_u;
-	        int delta = lineLength - length;
-	        int i;
-	        for (i = 0; i * step_d < prefix_len; i++)
-	        {
-	            int p = i * step_d;
-	            int start = max_3(p - i, p + delta - ((int)threshold - i), 0);
-	            int end = min_3(p + i, p + delta + ((int)threshold - i), lineLength - step_d);
-	            for (int strid = start; strid <= end; strid++) {
-	                TrieNode*  node = edTrie[length][i].search(query + strid, step_d);
-	                if (node) {
-	                    for (auto& candi : *(node->entries))
-	                        aval_list[candi] = true;
-	                }
-	            }
-	        }
-	        for (int j = 0; j < uptime; j++)
-	        {
-	            int p = i * step_d + j * step_u;
-	            int start = max_3(p - i - j, p + delta - ((int)threshold - i - j), 0);
-	            int end = min_3(p + i + j, p + delta + ((int)threshold - i - j), lineLength - step_u);
-	            for (int strid = start; strid <= end; strid++)
-	            {
-	                TrieNode*  node =edTrie[length][i + j].search(query + strid, step_u);
-	                if (node) {
-	                    for (auto& candi : *(node->entries))
-	                        aval_list[candi] = true;
-	                }
-	            }
-	        }
-	        for(int i = 0; i < 200010; ++i){
-	            if(aval_list[i]){
-	                unsigned ed_value = compute_ed(query, lineLength, lines[i].c_str(), lines[i].length(), threshold);
-	                if (ed_value <= threshold)
-	                    result.push_back(create_EDJoinResult(id1,i,ed_value));
-	            }
-	        }
-	    }
+        int step_d = length / (threshold + 1);
+        int uptime = length - step_d * (threshold + 1);
+        int step_u = uptime > 0 ? (step_d + 1) : step_d;
+        int prefix_len = length - uptime * step_u;
+        int delta = lineLength - length;
+        int i;
+        for (i = 0; i * step_d < prefix_len; i++)
+        {
+            int p = i * step_d;
+            int start = max_3(p - i, p + delta - ((int)threshold - i), 0);
+            int end = min_3(p + i, p + delta + ((int)threshold - i), lineLength - step_d);
+            for (int strid = start; strid <= end; strid++) {
+                TrieNode*  node = edTrie[length][i].search(query + strid, step_d);
+                if (node) {
+                    for (auto& candi : *(node->entries))
+                        aval_list[candi] = true;
+                }
+            }
+        }
+        for (int j = 0; j < uptime; j++)
+        {
+            int p = i * step_d + j * step_u;
+            int start = max_3(p - i - j, p + delta - ((int)threshold - i - j), 0);
+            int end = min_3(p + i + j, p + delta + ((int)threshold - i - j), lineLength - step_u);
+            for (int strid = start; strid <= end; strid++)
+            {
+                TrieNode*  node =edTrie[length][i + j].search(query + strid, step_u);
+                if (node) {
+                    for (auto& candi : *(node->entries))
+                        aval_list[candi] = true;
+                }
+            }
+        }
+        for(int i = 0; i < 200010; ++i){
+            if(aval_list[i]){
+                unsigned ed_value = compute_ed(query, lineLength, lines[i].c_str(), lines[i].length(), threshold);
+                if (ed_value <= threshold)
+                    result.push_back(create_EDJoinResult(id1,i,ed_value));
+            }
+        }
     }
     return SUCCESS;
 }
@@ -356,23 +352,27 @@ int SimJoiner::joinED(const char *filename1, const char *filename2, unsigned thr
     int id1 = 0;
     while (getline(fin, str))
     {
-        searchED(str.c_str(), id1, threshold, result);
+        char* buf = new char[258];
+		memcpy(buf, str.c_str(), 258);
+        if(buf[strlen(buf)-1]=='\n') buf[strlen(buf)-1]='\0';
+        searchED(buf, id1, threshold, result);
         
-        for (auto& lines : lines_short) {
-            string &shortstr = lines.first;
-            int ed;
-            if ((ed = compute_ed(str.c_str(), str.length(), shortstr.c_str(), shortstr.length(), threshold)) <= threshold)
-            {
-                EDJoinResult temp;
-                temp.id1 = id1;
-                temp.id2 = lines.second;
-                temp.s = ed;
-                result.push_back(temp);
-            }
-        }
+        // for (auto& lines : lines_short) {
+        //     string &shortstr = lines.first;
+        //     int ed;
+        //     if ((ed = compute_ed(str.c_str(), str.length(), shortstr.c_str(), shortstr.length(), threshold)) <= threshold)
+        //     {
+        //         EDJoinResult temp;
+        //         temp.id1 = id1;
+        //         temp.id2 = lines.second;
+        //         temp.s = ed;
+        //         result.push_back(temp);
+        //     }
+        // }
     	id1++;
     }
     fin.close();
     sort(result.begin(), result.end());
+    result.resize(unique(result.begin(), result.end()) - result.begin());
     return SUCCESS;
 }

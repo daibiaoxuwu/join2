@@ -13,21 +13,21 @@ bool Trie::insert_multiple_unique(int num, const char *str, size_t len) {
     TrieNode* node = __insert_and_find(str,len);
 
     //this word need to be unique in this line
-    if(node->newest_line_num < num){
+    // if(node->newest_line_num < num){
 
-        //if it's the first appearance of this word in this line
-        //set newest_line_num to remember this appearance
-        node->newest_line_num = num;
+    //     //if it's the first appearance of this word in this line
+    //     //set newest_line_num to remember this appearance
+    //     node->newest_line_num = num;
 
         //add this entry
         node->entries->push_back(num);
-        node->entry_freq->push_back(1);
+        // node->entry_freq->push_back(1);
 
-        return true;
-    } else {
-        *(node->entry_freq->end())++;
-        return false;
-    }
+    //     return true;
+    // } else {
+    //     *(node->entry_freq->end())++;
+    //     return false;
+    // }
 
     //this line has this word
 }

@@ -26,6 +26,9 @@ public:
     TrieNode(){
         entries = new std::vector<int>();
         entry_freq = new std::vector<int>();
+        newest_line_num = -1;
+        count = 0;
+        id = -1;
     }
     ~TrieNode(){
         delete entries;
