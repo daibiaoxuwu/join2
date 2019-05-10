@@ -183,12 +183,12 @@ public:
     vector<string> lines;
     vector<pair<string, int>> lines_short;
     int global_time;
-    int *time_count;
+    bool *aval_list;
     int createEDIndex(const char *filename, unsigned threshold);
     int createJaccIDF(const char *filename, int id);
     int createJaccIndex(const char *filename1, const char *filename2, double threshold);
     double compute_jaccard(std::set<string> *l1, std::set<string> *l2, double threshold);
-    int searchED(const char *query, unsigned threshold, std::vector<std::pair<unsigned, unsigned>> &result);
+    int searchED(const char *query, int id1, unsigned threshold,  vector<EDJoinResult> &result);
     unsigned compute_ed(const char* s1, int len1, const char* s2, int len2, unsigned threshold);
 
     SimJoiner();
