@@ -227,11 +227,11 @@ int SimJoiner::createEDIndex(const char *filename, unsigned threshold) {
 	for(line_count=0;fgets(buf,1024,file);++line_count){
         if(buf[strlen(buf)-1]=='\n') buf[strlen(buf)-1]='\0';
         int length = strlen(buf);
+        lines.push_back(buf);
         if (length < threshold + 1) {
             lines_short.push_back(make_pair(buf, line_count));
             continue;
         }
-        lines.push_back(buf);
         int step_d = length / (threshold + 1);
         int uptime = length - step_d * (threshold + 1);
         int step_u = uptime > 0 ? (step_d + 1) : step_d;
