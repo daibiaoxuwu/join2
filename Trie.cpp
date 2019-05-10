@@ -31,6 +31,16 @@ bool Trie::insert_multiple_unique(int num, const char *str, size_t len) {
 
     //this line has this word
 }
+int Trie::addCount(const char *str, size_t len) {
+    TrieNode* node = __insert_and_find(str,len);
+
+    if(node->id==-1) node->id = ++total;
+    node->count++;
+    return node->id;
+}
+
+
+
 //designed for a single line per Trie. existance marked by newest_line_num.
 //if non-existant before, return -1. else return the num of the FIRST occurence.
 int Trie::insert_single_line(int num, const char *str, size_t len) {

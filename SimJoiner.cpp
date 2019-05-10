@@ -79,20 +79,115 @@ SimJoiner::~SimJoiner() {
 }
 
 int SimJoiner::createJaccIDF(const char *filename, int id) {
+    char buf[1024];
+	FILE* file = fopen(filename,"r");
+	for(int line_count=0;fgets(buf,1024,file);++line_count){
+        string str1 = string(buf);
+        set<string> *tmp = new set<string>();
+        int len = str1.length();
+        int pos = 0;
+        for (int j = 0; j < len; j++)
+        {
+            if(str1[j] == ' ')
+            {
+                if(pos < j)
+                {
+                    jaccIDF.addCount(str1.substr(pos, j - pos).c_str(), j - pos);
+                    tmp->insert(str1.substr(pos, j - pos));
+                }
+                pos = j + 1;
+            }
+        }
+        if (pos < len)
+        {
+            jaccIDF.addCount(str1.substr(pos, len - pos).c_str(), len - pos);
+            tmp->insert(str1.substr(pos, len - pos));
+        }
+        linewords[id][line_count] = tmp;
+        line_count++;
+    }
+    fclose(file);
+    return SUCCESS;
 }
 
 int SimJoiner::createJaccIndex(const char *filename1, const char *filename2, double threshold) {
+    createJaccIDF(filename1, 0);
+    createJaccIDF(filename2, 1);
+    int totalNum = linewords[1].size();
+    for (int i = 0; i < totalNum; i++)
+    {
+        vector<index_len> vec_index;
+        for (auto &s : *(linewords[1][i])) {
+            index_len idl;
+            idl.len = jaccIDF.search(s.c_str(), s.length())->count;
+            idl.index = jaccIDF.search(s.c_str(), s.length())->id;
+            vec_index.push_back(idl);
+        }
+        sort(vec_index.begin(), vec_index.end());
+        int prelen = (1 - threshold) * linewords[1][i]->size() + 1;
+        for (int j = 0; j < prelen; j++)
+        {
+            index_len &idl = vec_index[j];
+            if (!jaccList[idl.index]) {
+                vector<int>* listtmp = new vector<int>();
+                listtmp->push_back(i);
+                jaccList[idl.index] = listtmp;
+            } else {
+                jaccList[idl.index]->push_back(i);
+            }
+        }
+    }
+
+    return SUCCESS;
 }
 
 double SimJoiner::compute_jaccard(set<string> *l1, set<string> *l2, double threshold)
 {
+    int cnt = 0;
+    for (auto& w : *l1)
+    {
+        if (l2->find(w) != l2->end())
+            cnt++;
+    }
+    return ((double)cnt / (double)(l1->size() + l2->size() - cnt));
 }
 
 int SimJoiner::joinJaccard(const char *filename1, const char *filename2, double threshold, vector<JaccardJoinResult> &result) {
     result.clear();
-  
+    createJaccIndex(filename1, filename2, threshold);
+    int totalNum = linewords[0].size();
+    for (int i = 0; i < totalNum; i++) {
+        vector<index_len> vec_index;
+        for (auto &s : *(linewords[0][i])) {
+            index_len idl;
+            idl.len = jaccIDF.search(s.c_str(), s.length())->count;
+            idl.index = jaccIDF.search(s.c_str(), s.length())->id;
+            vec_index.push_back(idl);
+        }
+        sort(vec_index.begin(), vec_index.end());
+        int prelen = (1 - threshold) * linewords[0][i]->size() + 1;
+        for (int j = 0; j < prelen; j++)
+        {
+            index_len &idl = vec_index[j];
+            if (jaccList[idl.index]) {
+                for (auto& lineid : *jaccList[idl.index]) {
+                    double jacc = compute_jaccard(linewords[0][i], linewords[1][lineid], threshold);
+                    if (jacc >= threshold) {
+                        JaccardJoinResult temp;
+                        temp.id1 = i;
+                        temp.id2 = lineid;
+                        temp.s = jacc;
+                        result.push_back(temp);
+                    }
+                }
+            }
+        }
+    }
+    sort(result.begin(), result.end());
+    result.resize(unique(result.begin(), result.end()) - result.begin());
     return SUCCESS;
 }
+
 
 int SimJoiner::createEDIndex(const char *filename, unsigned threshold) {
     lines.clear();
@@ -166,7 +261,7 @@ int SimJoiner::searchED(const char *query, unsigned threshold, std::vector<std::
     int lowerbound = my_max(0, lineLength - threshold);
     for (int length = lowerbound; length <= upperbound; length++)
     {
-        for(int it = 0; it < 128; ++it) if (edTrie[length][0].root->child[it]!=nullptr){
+        if (!edTrie[length][0].root->child.empty() || edTrie[length][0].root->count!=0){
         int step_d = length / (threshold + 1);
         int uptime = length - step_d * (threshold + 1);
         int step_u = uptime > 0 ? (step_d + 1) : step_d;

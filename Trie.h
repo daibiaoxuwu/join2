@@ -19,6 +19,9 @@ public:
     //time(frequency) of their appearances
     std::vector<int>* entry_freq;
     int newest_line_num = -1;
+    int count = 0;
+    int id = -1;
+
 
     TrieNode(){
         entries = new std::vector<int>();
@@ -32,6 +35,7 @@ public:
 class Trie {
 public:
     TrieNode* root;
+    int total = 0;
     Trie() {root = new TrieNode();}
     void deleteNode(TrieNode* node){
         for (auto nodepair : node->child){
@@ -47,6 +51,7 @@ public:
     	deleteNode(root);
     	root = new TrieNode();
 	}
+    int addCount(const char*, size_t);
     TrieNode* __insert_and_find(const char*, size_t);
     bool insert_multiple_unique(int num, const char *str, size_t len);
     int insert_single_line(int num, const char *str, size_t len);
