@@ -53,7 +53,7 @@ int Trie::insert_single_line(int num, const char *str, size_t len) {
 
 TrieNode* Trie::__insert_and_find(const char *str, size_t len) {
     TrieNode* node = root;
-    for(int i = 0; i < len; ++i){
+    for(int i = 0; i < (int)len; ++i){
         TrieNode* newNode = nullptr;
         for(auto nodepair : node->child){
             if(nodepair.first == (int)str[i]){
@@ -76,7 +76,7 @@ TrieNode* Trie::__insert_and_find(const char *str, size_t len) {
 
 TrieNode* Trie::search(const char *str, size_t len) {
     TrieNode* node = root;
-    for(int i = 0; i < len; ++i){
+    for(int i = 0; i < (int)len; ++i){
         TrieNode* newNode = nullptr;
         for(auto nodepair : node->child){
             if(nodepair.first == (int)str[i]){
