@@ -189,7 +189,7 @@ public:
     int createJaccIndex(const char *filename1, const char *filename2, double threshold);
     double compute_jaccard(std::set<string> *l1, std::set<string> *l2, double threshold);
     int searchED(const char *query, int id1, unsigned threshold,  vector<EDJoinResult> &result);
-    unsigned compute_ed(const char* s1, int len1, const char* s2, int len2, unsigned threshold);
+    unsigned calculate_ED(const char *query, const char *line, unsigned threshold);
 
     SimJoiner();
     ~SimJoiner();

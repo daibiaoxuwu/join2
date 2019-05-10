@@ -55,15 +55,6 @@ inline int max_3(int x, int y, int z)
     return my_max(my_max(x, y), z);
 }
 
-inline unsigned long long my_hash(const char* s,int len)
-{
-    unsigned long long hash = 0;
-    int seed = 131;
-    for (int i = 0; i < len; i++) {
-        hash = hash * seed + (int)s[i];
-    }
-    return hash & 0x7FFFFFFF;
-}
 
 inline JaccardJoinResult create_JaccardJoinResult(unsigned id1, unsigned id2, double s){
     JaccardJoinResult result;
@@ -83,8 +74,6 @@ inline EDJoinResult create_EDJoinResult(unsigned id1, unsigned id2, unsigned s){
 
 SimJoiner::SimJoiner() {
     aval_list = new bool[200010];
-    global_time = 0;
-    isRead = false;
     jaccList = new vector<int> *[1000000];
     for (int i = 0; i < 1000000; i++) {
         jaccList[i] = NULL;
@@ -199,13 +188,8 @@ int SimJoiner::joinJaccard(const char *filename1, const char *filename2, double 
             if (jaccList[idl.index]) {
                 for (auto& lineid : *jaccList[idl.index]) {
                     double jacc = compute_jaccard(linewords[0][i], linewords[1][lineid], threshold);
-                    if (jacc >= threshold) {
-                        JaccardJoinResult temp;
-                        temp.id1 = i;
-                        temp.id2 = lineid;
-                        temp.s = jacc;
-                        result.push_back(temp);
-                    }
+                    if (jacc >= threshold) 
+                        result.push_back(create_JaccardJoinResult(i, lineid, jacc));
                 }
             }
         }
@@ -242,48 +226,65 @@ int SimJoiner::createEDIndex(const char *filename, unsigned threshold) {
         for (int j = 0; j < uptime; j++)
             edTrie[length][i + j].insert_multiple_unique(line_count, buf + i * step_d + j * step_u, step_u);
     }
-    isRead = true;
     return SUCCESS;
 }
 
-unsigned SimJoiner::compute_ed(const char* str1, int m, const char* str2, int n, unsigned threshold)
-{
-    if (my_abs(m - n) > threshold)
-        return MY_MAX_INT;
-    int dp[m+1][n+1];
-        for (int i = 0; i <= my_min(threshold, m); i++)
-    {
-        dp[i][0] = i;
-    }
-    for (int j = 0; j <= my_min(threshold, n); j++)
-    {
-        dp[0][j] = j;
-    }
-    for (int i = 1; i <= m; i++)
-    {
-        int begin = my_max(i - threshold, 1);
-        int end = my_min(i + threshold, n);
-        if (begin > end)
-            break;
-        for (int j = begin; j <= end; j++)
-        {
-            int t = !(str1[i - 1] == str2[j - 1]);
-            int d1 = my_abs(i - 1 - j) > threshold ? MY_MAX_INT : dp[i - 1][j];
-            int d2 = my_abs(i - j + 1) > threshold ? MY_MAX_INT : dp[i][j - 1];
-            dp[i][j] = min_3(
-                d1 + 1,
-                d2 + 1,
-                dp[i - 1][j - 1] + t);
-        }
-    }
-    return dp[m][n];
+
+unsigned SimJoiner::calculate_ED(const char *query, const char *line, unsigned threshold){
+	const int query_len = (int)strlen(query);
+	const int line_len = (int)strlen(line);
+	unsigned data[query_len+1][line_len+1];
+
+	//initialize
+	for(unsigned i = 0; i <= query_len; ++i) data[i][0]=i;
+	for(unsigned i = 0; i <= line_len; ++i) data[0][i]=i;
+	//end answer
+	data[query_len][line_len] = threshold + 1;
+
+	int left = 1, right = my_min(line_len,1+threshold);
+	for(int i = 1; i <= query_len; ++ i){
+		if(left>right) return threshold + 1;
+
+		//narrow range for next round
+		bool leftflag = true;
+		int next_right = left;
+
+		left=my_max(left,i-threshold);
+		//leftmax for next round
+		if(left>1) data[i][left-1]=threshold+1;
+
+		for(int j = left; j <= right; ++ j){
+			data[i][j] = min_3(data[i-1][j-1] + (query[i-1] != line[j-1]),data[i-1][j] + 1, data[i][j-1]+1);
+
+			//narrow the left and right for next iter
+			if(data[i][j]>threshold){
+				//find the leftmost "<threshold"
+				if(leftflag) left = j;
+			} else {
+				leftflag = false;
+				//find the rightmost "<threshold"
+				next_right = j;
+			}
+		}
+		//cannot reach the end, terminate
+		if(next_right + query_len - i < line_len) return threshold +1;
+
+		if(next_right<line_len) {
+			right = next_right + 1;
+			//rightmax for next round
+			data[i][right] = threshold + 1;
+		} else{
+			right =next_right;
+		}
+	}
+	return data[query_len][line_len];
+
 }
 
 int SimJoiner::searchED(const char *query, int id1, unsigned threshold,  vector<EDJoinResult> &result){
 
     memset(aval_list, 0, 200010*sizeof(bool));
 
-    global_time++;
     int lineLength = strlen(query);
     int upperbound = my_min(lineLength + threshold, 256);
     int lowerbound = my_max(0, lineLength - threshold);
@@ -324,7 +325,7 @@ int SimJoiner::searchED(const char *query, int id1, unsigned threshold,  vector<
         }
         for(int i = 0; i < 200010; ++i){
             if(aval_list[i]){
-                unsigned ed_value = compute_ed(query, lineLength, lines[i].c_str(), lines[i].length(), threshold);
+                unsigned ed_value = calculate_ED(query, lines[i].c_str(), threshold);
                 if (ed_value <= threshold)
                     result.push_back(create_EDJoinResult(id1,i,ed_value));
             }
