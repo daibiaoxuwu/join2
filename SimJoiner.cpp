@@ -225,13 +225,12 @@ int SimJoiner::createEDIndex(const char *filename, unsigned threshold) {
         // }
         int step_d = length / (threshold + 1);
         int uptime = length - step_d * (threshold + 1);
-        int step_u = uptime > 0 ? (step_d + 1) : step_d;
-        int prefix_len = length - uptime * step_u;
-        int i;
-        for (i = 0; i * step_d < prefix_len; i++)
-            edTrie[length][i].insert_multiple_unique(line_count, buf + i * step_d, step_d);
-        for (int j = 0; j < uptime; j++)
-            edTrie[length][i + j].insert_multiple_unique(line_count, buf + i * step_d + j * step_u, step_u);
+        step_d++;
+        for (int i=0, pos = 0;i<=threshold; pos+=step_d, i++){
+            if(i==uptime) step_d--;
+            edTrie[length][i].insert_multiple_unique(line_count, buf + pos, step_d);
+        }
+
     }
     return SUCCESS;
 }
@@ -299,13 +298,10 @@ int SimJoiner::searchED(const char *query, int id1, unsigned threshold,  vector<
     {
         int step_d = length / (threshold + 1);
         int uptime = length - step_d * (threshold + 1);
-        int step_u = uptime > 0 ? (step_d + 1) : step_d;
-        int prefix_len = length - uptime * step_u;
         int delta = lineLength - length;
-        int i;
-        for (i = 0; i * step_d < prefix_len; i++)
-        {
-            int p = i * step_d;
+        step_d++;
+        for (int i=0, p = 0; i<=threshold; p+=step_d, i++){
+            if(i==uptime) step_d--;
             int start = max_3(p - i, p + delta - ((int)threshold - i), 0);
             int end = min_3(p + i, p + delta + ((int)threshold - i), lineLength - step_d);
             for (int strid = start; strid <= end; strid++) {
@@ -316,20 +312,7 @@ int SimJoiner::searchED(const char *query, int id1, unsigned threshold,  vector<
                 }
             }
         }
-        for (int j = 0; j < uptime; j++)
-        {
-            int p = i * step_d + j * step_u;
-            int start = max_3(p - i - j, p + delta - ((int)threshold - i - j), 0);
-            int end = min_3(p + i + j, p + delta + ((int)threshold - i - j), lineLength - step_u);
-            for (int strid = start; strid <= end; strid++)
-            {
-                TrieNode*  node =edTrie[length][i + j].search(query + strid, step_u);
-                if (node) {
-                    for (auto& candi : *(node->entries))
-                        aval_list[candi] = true;
-                }
-            }
-        }
+
         for(int i = 0; i < 200010; ++i){
             if(aval_list[i]){
                 unsigned ed_value = calculate_ED(query, lines[i].c_str(), threshold);
